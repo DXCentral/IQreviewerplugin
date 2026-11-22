@@ -1,8 +1,24 @@
 # IQ Review for SDR#
 
-Preview 1.0.1.0 · SDR# 1922 Beta · Windows x64 · .NET 10 / Airspy VDK.
+Preview 1.0.3.0 · SDR# 1922 Beta · Windows x64 · .NET 10 / Airspy VDK.
 
 A dockable recording review panel with a whole-recording overview, a zoomed timeline, precise time entry, fine steps, and A/B looping. The fine display offers an audio waveform envelope, an audio spectrogram, or a time ruler.
+
+## 1.0.2 input fixes
+
+The UTC/Local/Elapsed selector is left alone while its dropdown is open, so the live display refresh cannot overwrite a pending selection. Typed Time values remain intact when focus moves to **Go**; they return to normal refresh behavior after a successful seek. Invalid entries stay available for correction. **Enter** continues to work.
+
+**Go** can seek anywhere within the recording, including sections that have not played and have no waveform or spectrogram history. Audio-history coverage does not limit seeking. This update does not add background full-file analysis; previews still fill as played.
+
+## Optional compact Show/Hide panel
+
+Check **Use compact Show/Hide panel** at the top of the full interface. The dockable plugin panel becomes a single button. Dock that launcher at the left, right, top or bottom, or stack it with other panels.
+
+**Show** opens the full interface in a separate floating window; **Hide** removes it from view. The full window's **X** also hides it. The same interface instance is retained, including selections and edits. The choice is remembered separately for each plugin, and floating-window position and size survive a normal SDR# restart. Full windows start hidden when compact mode is restored.
+
+Uncheck the option in the floating interface to return the full interface to its normal dockable panel. No restart is needed. If the old dock area remains large after conversion, resize it to the button height; SDR# controls and saves the surrounding docking layout. The floating full interface scrolls when resized smaller so its controls remain reachable.
+
+Hiding a window changes presentation only. SDR# must remain open for ongoing playback, recording and scheduled jobs. Each plugin has its own launcher and floating window; neither requires the other plugin to be installed.
 
 ## Install
 
@@ -70,6 +86,14 @@ IQ formats and large-file support are supplied by SDR#'s player; IQ Review does 
 
 Select **Baseband File Player** as the source once, then use IQ Review's **Open…** button to choose recordings. It does not switch away from a live receiver automatically. File opening uses a checked adapter to SDR# 1922's native file loader and pauses the stream before replacing the reader. If SDR# is still calculating its own file overview, the panel asks you to try again once that finishes. An invalid file produces an error and attempts to restore the previous recording and position. Future SDR# changes to these internal members may require a plugin update.
 
+## 1.0.2 regression validation
+
+Native SDR# 1922 tests reproduced both failures with the old refresh behavior on a copy of the plugin. A pending Local selection was reset to UTC, and the typed elapsed value `00:00:59.125` was replaced by the current `00:00:00.500` before Go processed it.
+
+With the fix, the open selector kept Local/UTC/Elapsed choices through repeated real timer refreshes. Go and Enter sought exact unplayed positions in all three time bases while the recording's audio history was completely empty. Tests also covered Go during playback, preserving a rejected entry for correction, successful Local-time correction, and persistence on clean SDR# exit. The source was the supplied Linrad channel-A IQ WAV, a 120-second recording, tuned to 760 kHz with a 10 kHz filter. Build/deploy results and native measurements are supplied separately from the install package.
+
+An initial isolated-profile test showed SDR# changing DSB/binaural to AM/mono during its first StartRadio call, before Go ran. Subsequent input controls preserved the settings active after that startup. The input fix does not set the receiver mode; no change to that host behavior is included.
+
 ## Helpful tester reports
 
 Native validation of 1.0.1 in SDR# 1922 used 16-bit PCM IQ WAV excerpts from the supplied Linrad channel-A recording, tuned to 760 kHz in DSB with binaural enabled and a 10 kHz channel filter. Checks passed for the dedicated Play/Pause/Stop buttons; paused millisecond seeks; opening files; Previous/Next folder order and boundaries; continuing or pausing playback across file changes; retaining tuning/mode/binaural/filter settings; recovering the previous file and position after a malformed WAV; display changes retaining history; all four native FFT detail sizes; settings serialization and saving on clean exit; and responsive horizontal/stacked controls including the options drawer. Native control renders were checked at 1100 × 400 and 320 × 600 pixels; control bounds were also checked at 800 pixels wide. The stereo monitor left all input samples unchanged and retained a 1 kHz tone in opposite-polarity L/R channels at 2048-point detail. No audio-display queue drops were observed in this run. Release build: 0 warnings, 0 errors.
@@ -92,3 +116,9 @@ SDR# supplies the runtime libraries; references are compile-time only. No extern
 
 See `LICENSE.txt` for the Airspy VDK license and its Airspy ecosystem restriction. Include it when redistributing this SDR# plugin.
 
+
+## Compact launcher validation
+
+The compact launchers were tested together in an isolated SDR# 1922 instance using the supplied Linrad-derived 1.2288 MS/s IQ WAV, DSB, binaural and a 10 kHz filter. Native checks covered Show/Hide, X-to-hide, returning to full-panel mode without restarting, preserved UI instances and selected tabs, playback and Record Now continuing while hidden, a scheduled job starting and finishing while hidden, and saved compact preferences/window geometry after restart. The existing DSP and scheduling logic were not changed. The floating detail windows use the same panels and SDR# theme service. Physical live receivers, all display scaling settings and every multi-monitor arrangement were not revalidated for this UI change.
+
+Source builds require both the plugin folder and the accompanying **Shared** folder beside it in the VDK. Shared/PluginWindowHost.cs is compiled into each plugin, so no additional runtime DLL is needed.
